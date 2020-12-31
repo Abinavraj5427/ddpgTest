@@ -100,10 +100,10 @@ def ddpg(
     tau = 0.005, 
     batch_size = 64, 
     memory_cap = 50000,
-    start_steps = 10):
+    start_steps = 15):
     np.random.seed(0)
     
-    env, test_env = env_fn(), test_env_fn()
+    env = env_fn()
 
     num_states = np.squeeze(env.observation_spec()['robot0_robot-state'].shape)
     print("Size of State Space ->  {}".format(num_states))
@@ -276,6 +276,7 @@ def ddpg(
 
         test_returns = []
         def test_agent(num_episodes=5):
+            test_env = test_env_fn()
             # n_steps = 0
             for j in range(num_episodes):
                 s, episode_return, episode_length, d = test_env.reset(), 0, 0, False
@@ -292,7 +293,7 @@ def ddpg(
                 test_returns.append(episode_return)
             test_env.close()
 
-        if ep > 0 and ep % 2 == 0:
+        if ep > 0 and ep % 10 == 0:
             test_agent()
 
     # Plotting graph
