@@ -91,6 +91,7 @@ def update_target(target_weights, weights, tau):
 # Training hyperparameter
 def ddpg(
     env_fn,
+    test_env_fn,
     std_dev = 0.2, 
     critic_lr = 0.002, 
     actor_lr = 0.001, 
@@ -100,8 +101,9 @@ def ddpg(
     batch_size = 64, 
     memory_cap = 50000,
     start_steps = 10):
-
-    env, test_env = env_fn(), env_fn()
+    np.random.seed(0)
+    
+    env, test_env = env_fn(), test_env_fn()
 
     num_states = np.squeeze(env.observation_spec()['robot0_robot-state'].shape)
     print("Size of State Space ->  {}".format(num_states))
@@ -143,7 +145,7 @@ def ddpg(
     def get_critic():
         # State as input
         state_input = layers.Input(shape=(num_states,))
-        state_out = layers.Dense(16, activation="relu")(state_input)
+        state_out = layers.Dense(32, activation="relu")(state_input)
         state_out = layers.Dense(32, activation="relu")(state_out)
 
         # Action as input
@@ -308,9 +310,19 @@ if __name__ == '__main__':
         env_name="Lift",
         robots="Sawyer",
         gripper_types="default",
+        has_renderer=False,
+        has_offscreen_renderer=False,
+        horizon=700,
+        reward_shaping=True,
+	    use_camera_obs=False
+    ),
+    test_env_fn=lambda: suite.make(
+        env_name="Lift",
+        robots="Sawyer",
+        gripper_types="default",
         has_renderer=True,
         has_offscreen_renderer=False,
         horizon=700,
         reward_shaping=True,
-	use_camera_obs=False
+	    use_camera_obs=False
     ), total_episodes=200)

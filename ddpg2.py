@@ -294,5 +294,5 @@ def ddpg(
     # @tf.function
     
 if __name__ == '__main__':
-    problem = "MountainCarContinuous-v0"
+    problem = "Pendulum-v0"
     ddpg(env_fn=lambda: gym.make(problem), total_episodes=200)
