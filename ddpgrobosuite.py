@@ -103,12 +103,12 @@ def ddpg(
 
     env, test_env = env_fn(), env_fn()
 
-    num_states = env.observation_spec()['robot-state'].shape
+    num_states = np.squeeze(env.observation_spec()['robot0_robot-state'].shape)
     print("Size of State Space ->  {}".format(num_states))
-    num_actions = env.action_dim()
+    num_actions = env.action_dim
     print("Size of Action Space ->  {}".format(num_actions))
 
-    upper_bound, lower_bound = env.action_spec()
+    lower_bound, upper_bound = env.action_spec
 
     print("Max Value of Action ->  {}".format(upper_bound))
     print("Min Value of Action ->  {}".format(lower_bound))
@@ -130,7 +130,7 @@ def ddpg(
         inputs = layers.Input(shape=(num_states,))
         out = layers.Dense(256, activation="relu")(inputs)
         out = layers.Dense(256, activation="relu")(out)
-        outputs = layers.Dense(1, activation="tanh", kernel_initializer=last_init)(out)
+        outputs = layers.Dense(num_actions, activation="tanh", kernel_initializer=last_init)(out)
 
         # Output controls
         center = (upper_bound + lower_bound) / 2
@@ -142,7 +142,7 @@ def ddpg(
 
     def get_critic():
         # State as input
-        state_input = layers.Input(shape=(num_states))
+        state_input = layers.Input(shape=(num_states,))
         state_out = layers.Dense(16, activation="relu")(state_input)
         state_out = layers.Dense(32, activation="relu")(state_out)
 
@@ -193,34 +193,39 @@ def ddpg(
             # Uncomment this to see the Actor in action
             # But not in a python notebook.
             # env.render()
-            prev_state = prev_state['robot-state']
+            prev_state = prev_state['robot0_robot-state']
             tf_prev_state = tf.expand_dims(tf.convert_to_tensor(prev_state), 0)
 
             def policy(state, noise_object=None):
-                sampled_actions = tf.squeeze(actor_model(state))
-                noise = 0
-                if(noise_object != None):
-                    noise = noise_object()    
+                sampled_actions = np.squeeze(actor_model(state).numpy())
+                
+                # noise = 0
+                # if(noise_object != None):
+                #     noise = noise_object()
+                noise = 0.05 * np.random.randn(num_actions)
+                
+                
+                sampled_actions = sampled_actions + noise
                 
                 # Adding noise to action
-                sampled_actions = sampled_actions.numpy() + noise
+                # sampled_actions = sampled_actions.numpy() + noise
 
                 # We make sure action is within bounds
-                legal_action = np.clip(sampled_actions, lower_bound, upper_bound)
-
-                return [np.squeeze(legal_action)]
+                legal_action = np.clip(sampled_actions,lower_bound,upper_bound)
+                return legal_action
 
             
             if ep > start_steps:
                 action = policy(tf_prev_state, ou_noise)
             else:
-                action = env.action_space.sample()
+                action = np.random.randn(env.robots[0].dof) 
             
 
             # Recieve state and reward from environment.
             state, reward, done, info = env.step(action)
 
-            buffer.record((prev_state, action, reward, state))
+            next_state = state['robot0_robot-state']
+            buffer.record((prev_state, action, reward, next_state))
             episodic_reward += reward
 
             state_batch, action_batch, reward_batch, next_state_batch = buffer.sample()
@@ -274,18 +279,18 @@ def ddpg(
                 s, episode_return, episode_length, d = test_env.reset(), 0, 0, False
                 while not (d):
                     # Take deterministic actions at test time (noise_scale = 0)
-                    test_env.render()
+                    s = s['robot0_robot-state']
                     s = tf.expand_dims(tf.convert_to_tensor(s), 0)
-                    s = s['robot-state']
                     a = policy(s)
                     s, r, d, _ = test_env.step(a)
+                    test_env.render()
                     episode_return += r
                     episode_length += 1
                 print('test return:', episode_return, 'episode_length:', episode_length)
                 test_returns.append(episode_return)
             test_env.close()
 
-        if ep > 0 and ep % 25 == 0:
+        if ep > 0 and ep % 2 == 0:
             test_agent()
 
     # Plotting graph
@@ -303,8 +308,9 @@ if __name__ == '__main__':
         env_name="Lift",
         robots="Sawyer",
         gripper_types="default",
-        has_renderer=False,
+        has_renderer=True,
         has_offscreen_renderer=False,
         horizon=700,
-        reward_shaping=True
+        reward_shaping=True,
+	use_camera_obs=False
     ), total_episodes=200)
