@@ -1,6 +1,7 @@
 import gym
 import robosuite as suite
 from gym import spaces
+import numpy as np
 
 class RSEnv(gym.Env):
 	"""A robosuite environment for OpenAI Gym"""
@@ -21,7 +22,7 @@ class RSEnv(gym.Env):
 		obs_high = np.fill(obs_shape)
 		lower_bound, upper_bound = self.env.action_spec
 		self.action_space = spaces.Box(low=lower_bound, high=upper_bound, shape=self.env.action_dim, dtype=np.float32)
-		self.observation_space = spaces.Box(low=obs_low, high=obs_high, obs_shape, np.float32)
+		self.observation_space = spaces.Box(low=obs_low, high=obs_high, shape=obs_shape, dtype=np.float32)
 
 
 	def step(self, action):
