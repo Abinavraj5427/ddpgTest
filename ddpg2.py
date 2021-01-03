@@ -185,12 +185,12 @@ def ddpg(
 
         prev_state = env.reset()
         episodic_reward = 0
-
+        total_steps = 0
         while True:
             # Uncomment this to see the Actor in action
             # But not in a python notebook.
             # env.render()
-
+            total_steps = total_steps+1
             tf_prev_state = tf.expand_dims(tf.convert_to_tensor(prev_state), 0)
 
             def policy(state, noise_object=None):
@@ -220,6 +220,13 @@ def ddpg(
             buffer.record((prev_state, action, reward, state))
             episodic_reward += reward
 
+            if done:
+                break
+
+            prev_state = state
+
+        for _ in range(total_steps):
+
             state_batch, action_batch, reward_batch, next_state_batch = buffer.sample()
 
             def update():
@@ -246,16 +253,10 @@ def ddpg(
                 actor_optimizer.apply_gradients(
                     zip(actor_grad, actor_model.trainable_variables)
                 )
-
+            
             update()
             update_target(target_actor.variables, actor_model.variables, tau)
             update_target(target_critic.variables, critic_model.variables, tau)
-
-            # End this episode when `done` is True
-            if done:
-                break
-
-            prev_state = state
 
         ep_reward_list.append(episodic_reward)
 

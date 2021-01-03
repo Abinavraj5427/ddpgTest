@@ -1,6 +1,8 @@
 import IPython
+import tensorflow as tf
 
-from env import RSEnv
+from env.RSEnv import RSEnv
+from env.TestRSEnv import TestRSEnv
 from acme import environment_loop
 from acme import specs
 from acme import wrappers
@@ -68,6 +70,13 @@ env_loop = environment_loop.EnvironmentLoop(
 # Run a `num_episodes` training episodes.
 # Rerun this cell until the agent has learned the given task.
 env_loop.run(num_episodes=1000)
+
+tf.save_model(policy_network, "d4pg_policy")
+tf.save_model(critic_network, "d4pg_critic")
+
+environment = TestRSEnv()
+environment = wrappers.GymWrapper(environment)
+environment = wrappers.SinglePrecisionWrapper(environment)
 
 timestep = environment.reset()
 while not timestep.last():

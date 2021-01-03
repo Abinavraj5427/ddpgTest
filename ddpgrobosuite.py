@@ -3,6 +3,8 @@ import robosuite as suite
 import tensorflow as tf
 from tensorflow.keras import layers
 import numpy as np
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 
@@ -100,7 +102,7 @@ def ddpg(
     tau = 0.005, 
     batch_size = 64, 
     memory_cap = 50000,
-    start_steps = 15):
+    start_steps = 50):
     np.random.seed(0)
     
     env = env_fn()
@@ -115,7 +117,7 @@ def ddpg(
     print("Max Value of Action ->  {}".format(upper_bound))
     print("Min Value of Action ->  {}".format(lower_bound))
     
-    ou_noise = OUActionNoise(mean=np.zeros(1), std_deviation=float(std_dev) * np.ones(1))
+    ou_noise = OUActionNoise(mean=np.zeros(num_actions), std_deviation=float(std_dev) * np.ones(num_actions))
     
     """
     Here we define the Actor and Critic networks. These are basic Dense models
@@ -190,11 +192,12 @@ def ddpg(
 
         prev_state = env.reset()
         episodic_reward = 0
-
+        total_steps = 0
         while True:
             # Uncomment this to see the Actor in action
             # But not in a python notebook.
             # env.render()
+            total_steps = total_steps + 1
             prev_state = prev_state['robot0_robot-state']
             tf_prev_state = tf.expand_dims(tf.convert_to_tensor(prev_state), 0)
 
@@ -204,7 +207,7 @@ def ddpg(
                 # noise = 0
                 # if(noise_object != None):
                 #     noise = noise_object()
-                noise = 0.05 * np.random.randn(num_actions)
+                noise = 0.2 * np.random.randn(num_actions)
                 
                 
                 sampled_actions = sampled_actions + noise
@@ -229,6 +232,13 @@ def ddpg(
             next_state = state['robot0_robot-state']
             buffer.record((prev_state, action, reward, next_state))
             episodic_reward += reward
+
+            if done:
+                break
+
+            prev_state = state
+
+        for _ in range(total_steps):
 
             state_batch, action_batch, reward_batch, next_state_batch = buffer.sample()
 
@@ -258,20 +268,15 @@ def ddpg(
                 )
 
             update()
-            update_target(target_actor.variables, actor_model.variables, tau)
-            update_target(target_critic.variables, critic_model.variables, tau)
-
-            # End this episode when `done` is True
-            if done:
-                break
-
-            prev_state = state
+        
+        update_target(target_actor.variables, actor_model.variables, tau)
+        update_target(target_critic.variables, critic_model.variables, tau)
 
         ep_reward_list.append(episodic_reward)
 
         # Mean of last 40 episodes
         avg_reward = np.mean(ep_reward_list[-40:])
-        print("Episode * {} * Avg Reward is ==> {}".format(ep, avg_reward))
+        print("Episode * {} * Avg Reward is ==> {} Episode Reward is ==> {} ep len: {}".format(ep, avg_reward, episodic_reward, total_steps))
         avg_reward_list.append(avg_reward)
 
         test_returns = []
@@ -293,17 +298,17 @@ def ddpg(
                 test_returns.append(episode_return)
             test_env.close()
 
-        if ep > 0 and ep % 10 == 0:
+        if ep > 0 and ep % 15 == 0:
             test_agent()
 
     # Plotting graph
     # Episodes versus Avg. Rewards
     plt.plot(avg_reward_list)
+    print(avg_reward_list)
     plt.xlabel("Episode")
     plt.ylabel("Avg. Epsiodic Reward")
     plt.show()
     env.close()
-    test_env.close()
     
 if __name__ == '__main__':
     problem = "Pendulum-v0"
@@ -313,7 +318,8 @@ if __name__ == '__main__':
         gripper_types="default",
         has_renderer=False,
         has_offscreen_renderer=False,
-        horizon=700,
+        horizon=600,
+        reward_scale=100.0,
         reward_shaping=True,
 	    use_camera_obs=False
     ),
@@ -322,8 +328,9 @@ if __name__ == '__main__':
         robots="Sawyer",
         gripper_types="default",
         has_renderer=True,
+        horizon=600,
         has_offscreen_renderer=False,
-        horizon=700,
         reward_shaping=True,
+        reward_scale=100.0,
 	    use_camera_obs=False
-    ), total_episodes=200)
+    ), total_episodes=5)
