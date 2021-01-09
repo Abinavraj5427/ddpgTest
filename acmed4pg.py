@@ -1,5 +1,5 @@
-import IPython
 import tensorflow as tf
+import acme
 
 from env.RSEnv import RSEnv
 from env.TestRSEnv import TestRSEnv
@@ -69,10 +69,17 @@ env_loop = environment_loop.EnvironmentLoop(
 
 # Run a `num_episodes` training episodes.
 # Rerun this cell until the agent has learned the given task.
-env_loop.run(num_episodes=1000)
+env_loop.run(num_episodes=5000)
 
-tf.save_model(policy_network, "d4pg_policy")
-tf.save_model(critic_network, "d4pg_critic")
+
+@tf.function(input_signature=[tf.TensorSpec(shape=(1,32), dtype=np.float32)])
+def policy_inference(x):
+	return policy_network(x)
+
+p_save = snt.Module()
+p_save.inference = policy_inference
+p_save.all_variables = list(policy_network.variables) 
+tf.saved_model.save(p_save, "p_save")
 
 environment = TestRSEnv()
 environment = wrappers.GymWrapper(environment)
@@ -83,6 +90,6 @@ while not timestep.last():
   # Simple environment loop.
   action = agent.select_action(timestep.observation)
   timestep = environment.step(action)
-  environment.environment.render()
+  environment.render()
 
-environment.environment.close()
+environment.close()

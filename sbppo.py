@@ -10,7 +10,7 @@ env = RSEnv()
 #model = PPO1(MlpPolicy, env, verbose=1)
 model = PPO1.load("sbppov3")
 model.set_env(env)
-model.learn(total_timesteps=1800000, log_interval=10, reset_num_timesteps=False)
+model.learn(total_timesteps=3000000, log_interval=10, reset_num_timesteps=False)
 model.save("sbppov4")
 
 env = TestRSEnv()
