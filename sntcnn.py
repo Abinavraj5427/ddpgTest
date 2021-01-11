@@ -25,7 +25,7 @@ class LayerNormCNN(snt.Module):
     super().__init__(name='feedforward_mlp_torso')
 
     self._network = snt.Sequential([
-        snt.Conv2D(output_channels = 32, kernal_shape = 3),
+        snt.Conv2D(output_channels = 32, kernel_shape = 3),
         tf.nn.elu,
         snt.Flatten(),
         snt.Linear(layer_sizes[0], w_init=uniform_initializer),
