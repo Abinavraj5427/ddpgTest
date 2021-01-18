@@ -79,7 +79,7 @@ returns = env_loop.run(num_episodes=5000)
 
 plt.plot(returns)
 plt.show()
-
+print(returns)
 @tf.function(input_signature=[tf.TensorSpec(shape=(1,32), dtype=np.float32)])
 def policy_inference(x):
 	return policy_network(x)
@@ -94,10 +94,13 @@ environment = wrappers.GymWrapper(environment)
 environment = wrappers.SinglePrecisionWrapper(environment)
 
 timestep = environment.reset()
+rets=0
 while not timestep.last():
   # Simple environment loop.
   action = agent.select_action(timestep.observation)
   timestep = environment.step(action)
   environment.render()
+  rets+=timestep.reward
 
 environment.close()
+print(rets)

@@ -11,7 +11,7 @@ class RSEnv(gym.Env):
 		self.env = suite.make(
 			env_name = "Lift",
 			robots="Sawyer",
-			horizon=600,
+			horizon=500,
 			has_renderer=False,
 			has_offscreen_renderer=False,
 			use_camera_obs=False,

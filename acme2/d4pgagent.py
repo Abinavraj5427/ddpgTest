@@ -22,7 +22,7 @@ from acme import specs
 from acme import types
 from acme.adders import reverb as adders
 #from acme.agents import agent
-import agent
+from acme2 import agent
 from acme.agents.tf import actors
 from acme.agents.tf.d4pg import learning
 from acme.tf import networks

@@ -1,5 +1,4 @@
 import copy
-import pyvirtualdisplay
 import imageio 
 import base64
 
@@ -16,8 +15,11 @@ from acme.agents import agent
 from acme.tf import utils as tf2_utils
 from acme.utils import loggers
 
+import time
 import gym 
 import dm_env
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import numpy as np
 import reverb
@@ -73,7 +75,9 @@ replay_buffer = reverb.Table(
     max_size=1000000,
     remover=reverb.selectors.Fifo(),
     sampler=reverb.selectors.Uniform(),
-    rate_limiter=reverb.rate_limiters.MinSize(min_size_to_sample=1))
+    rate_limiter=reverb.rate_limiters.MinSize(min_size_to_sample=1),
+    signature=adders.NStepTransitionAdder.signature(environment_spec)
+)
 
 replay_table_name = adders.DEFAULT_PRIORITY_TABLE
 
@@ -163,7 +167,7 @@ def _calculate_num_learner_steps(num_observations,min_observations,observations_
 
 samples_per_insert = 32.0
 observations_per_step = 256 / samples_per_insert # batch size / samples per insert
-num_training_episodes =  10 # @param {type: "integer"}
+num_training_episodes = 4000 # @param {type: "integer"}
 min_actor_steps_before_learning = 1000  # @param {type: "integer"}
 num_actor_steps_per_iteration =   100 # @param {type: "integer"}
 num_learner_steps_per_iteration = 1  # @param {type: "integer"}
@@ -178,7 +182,9 @@ for episode in range(num_training_episodes):
     timestep = environment.reset()
     actor.observe_first(timestep)
     episode_return = 0
-
+    
+    episode_steps = 0
+    start_time = time.time()
     # Run Episode
     while not timestep.last():
         # Get an action from the agent and step in the environment.
@@ -192,7 +198,8 @@ for episode in range(num_training_episodes):
         episode_return += next_timestep.reward
         actor_steps_taken += 1
         timestep = next_timestep
-
+        episode_steps += 1
+        
         # update
         num_learner_steps = _calculate_num_learner_steps(actor_steps_taken, 1000, observations_per_step)
         for _ in range(num_learner_steps):
@@ -212,12 +219,14 @@ for episode in range(num_training_episodes):
         #     learner_steps_taken += num_learner_steps_per_iteration
 
     # Log quantities.
-    print('Episode: %d | Return: %f | Learner steps: %d | Actor steps: %d'%(
-            episode, episode_return, learner_steps_taken, actor_steps_taken))
-    returns.add(episode_return)
+    steps_per_second = episode_steps // (time.time() - start_time)
+    print('Episode: %d | Return: %f | Total Learner steps: %d | Actor steps: %d | Steps per second: %f'%(
+            episode, episode_return, learner_steps_taken, actor_steps_taken, steps_per_second))
+    returns.append(episode_return)
 
 plt.plot(returns)
 plt.show()
+print(returns)
 
 @tf.function(input_signature=[tf.TensorSpec(shape=(1,32), dtype=np.float32)])
 def policy_inference(x):
@@ -233,10 +242,13 @@ environment = wrappers.GymWrapper(environment)
 environment = wrappers.SinglePrecisionWrapper(environment)
 
 timestep = environment.reset()
+rets = 0
 while not timestep.last():
     # Simple environment loop.
     action = actor.select_action(timestep.observation)
     timestep = environment.step(action)
     environment.render()
+    rets += timestep.reward
 
 environment.close()
+print(rets)
