@@ -75,7 +75,7 @@ env_loop = EnvironmentLoop(
 
 # Run a `num_episodes` training episodes.
 # Rerun this cell until the agent has learned the given task.
-returns = env_loop.run(num_episodes=5000)
+returns = env_loop.run(num_episodes=6000)
 
 plt.plot(returns)
 plt.show()
@@ -87,7 +87,7 @@ def policy_inference(x):
 p_save = snt.Module()
 p_save.inference = policy_inference
 p_save.all_variables = list(policy_network.variables) 
-tf.saved_model.save(p_save, "p3_save")
+tf.saved_model.save(p_save, "p4_save")
 
 environment = TestRSEnv()
 environment = wrappers.GymWrapper(environment)
