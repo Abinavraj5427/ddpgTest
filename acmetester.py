@@ -16,7 +16,7 @@ import sonnet as snt
 import gym
 
 
-p_save = tf.keras.models.load_model('p_save')
+p_save = tf.keras.models.load_model('p4_save')
 
 returns = 0
 environment = TestRSEnv()
